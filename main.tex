@@ -13,6 +13,8 @@
 % Graphics and diagrams
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, decorations.pathreplacing}
+\usepackage{graphicx}
+\usepackage{float}
 
 % Tables, lists, code
 \usepackage{booktabs}
@@ -45,8 +47,15 @@
 }
 
 % Custom colors
-\definecolor{ekweblue}{RGB}{30,60,114}
-\definecolor{ekwegold}{RGB}{180,140,20}
+\definecolor{ekweprimary}{RGB}{124,46,31}    % #7C2E1F deep red-brown
+\definecolor{ekwemid}{RGB}{155,62,40}        % #9B3E28 warm brown
+\definecolor{ekwelight}{RGB}{181,94,60}      % #B55E3C terracotta
+\definecolor{ekwegold}{RGB}{209,168,114}     % #D1A872 golden tan
+\definecolor{ekwesand}{RGB}{201,178,140}     % #C9B28C sandstone
+\definecolor{ekwedark}{RGB}{90,58,40}        % #5A3A28 dark wood
+\definecolor{ekwebg}{RGB}{235,235,235}       % #EBEBEB light grey
+% Legacy aliases
+\definecolor{ekweblue}{RGB}{124,46,31}
 
 \begin{document}
 
@@ -78,11 +87,7 @@
 
 \vspace{2cm}
 
-\begin{tikzpicture}
-  \draw[ekweblue, line width=2pt] (0,0) circle (1.2cm);
-  \draw[ekwegold, line width=1.5pt] (0,0) circle (0.8cm);
-  \node[font=\Large\bfseries, color=ekweblue] at (0,0) {E};
-\end{tikzpicture}
+\includegraphics[width=5cm]{figures/ekwe-drum.jpg}
 
 \vfill
 
@@ -228,35 +233,9 @@ The problem addressed is the absence of an open, self-hostable, incentive-compat
 
 Ekwe Protocol is defined as a layered system with explicit separation between transport adapters and the event layer. Figure~\ref{fig:architecture} illustrates the five-layer stack.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
-\begin{tikzpicture}[
-  layer/.style={
-    draw=ekweblue, thick, rounded corners=3pt,
-    minimum width=13cm, minimum height=1.1cm,
-    fill=ekweblue!5, font=\sffamily\small,
-    text=ekweblue
-  },
-  label/.style={font=\sffamily\scriptsize\itshape, text=gray},
-  arrow/.style={-{Stealth[length=3mm]}, thick, gray!60}
-]
-  \node[layer] (L5) at (0,0) {\textbf{Application Layer}: EkwePay \,$\cdot$\, SOS Alerts \,$\cdot$\, Medical Logistics \,$\cdot$\, dApps};
-  \node[layer] (L4) at (0,-1.4) {\textbf{Execution Layer}: WASM Runtime \,$\cdot$\, zkVM (RISC Zero / SP1) \,$\cdot$\, Proof Generation};
-  \node[layer] (L3) at (0,-2.8) {\textbf{Event Routing Layer (Bridge Logic)}: Subscription \,$\cdot$\, Forwarding \,$\cdot$\, Dedup \,$\cdot$\, Fee Enforcement};
-  \node[layer] (L2) at (0,-4.2) {\textbf{Transport Layer}: BLE Mesh \,$\cdot$\, Wi-Fi Direct \,$\cdot$\, LoRaWAN \,$\cdot$\, UHF/VHF \,$\cdot$\, NFC/QR/Audio};
-  \node[layer, fill=ekwegold!10, draw=ekwegold!80!black] (L1) at (0,-5.6) {\textbf{Settlement Layer}: Bitcoin L2 Commitments \,$\cdot$\, zkRollup Batching \,$\cdot$\, L1 Anchoring};
-
-  \draw[arrow] (L5.south) -- (L4.north);
-  \draw[arrow] (L4.south) -- (L3.north);
-  \draw[arrow] (L3.south) -- (L2.north);
-  \draw[arrow] (L2.south) -- (L1.north);
-
-  \node[label, right] at (6.8,0) {User-facing};
-  \node[label, right] at (6.8,-1.4) {Compute};
-  \node[label, right] at (6.8,-2.8) {Routing};
-  \node[label, right] at (6.8,-4.2) {Physical};
-  \node[label, right] at (6.8,-5.6) {Finality};
-\end{tikzpicture}
+\includegraphics[width=\textwidth]{figures/d1-architecture.png}
 \caption{Ekwe Protocol layered architecture.}
 \label{fig:architecture}
 \end{figure}
@@ -287,7 +266,7 @@ Each node in the Ekwe network possesses:
 
 \subsection{Node Types}
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Ekwe Protocol node types and capabilities.}
 \label{tab:nodes}
