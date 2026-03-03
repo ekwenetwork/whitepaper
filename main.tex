@@ -293,6 +293,15 @@ Smartbox & Advanced EkweBox variant incorporating Interaction Combinator-based A
   \item A subset of nodes periodically gains Internet access, enabling delayed global synchronization.
 \end{enumerate}
 
+Figure~\ref{fig:topology} illustrates how these node types interconnect across edge clusters via heterogeneous radio links.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/d3-network-topology.png}
+\caption{Ekwe network topology: edge clusters connected via multi-radio relay infrastructure.}
+\label{fig:topology}
+\end{figure}
+
 % ============================================================
 % 7. EKWE EVENT LAYER
 % ============================================================
@@ -361,6 +370,44 @@ Ekwe adopts DTN-aligned store-and-forward semantics~\cite{rfc4838}. Each relay m
   \item \textbf{Class 2 (Critical)}: priority scheduling, wider replication, and optional acknowledgment aggregation. Reserved for emergency broadcasts and high-value transactions.
 \end{itemize}
 
+\subsubsection{Delivery Probability Model}
+
+For a QoS class $q$ event with replication factor $r(q)$ and TTL $T$, we model delivery probability over a network of $N$ nodes with average contact rate $\lambda_c$ (pairwise contact events per unit time). Under the epidemic routing model with bounded replication:
+
+\begin{equation}
+P_{\text{deliver}}(T, r, N) = 1 - \left(1 - \frac{r}{N}\right)^{\lambda_c \cdot T \cdot N}
+\label{eq:delivery_prob}
+\end{equation}
+
+For sparse networks ($r \ll N$), this simplifies to:
+
+\begin{equation}
+P_{\text{deliver}} \approx 1 - e^{-\lambda_c \cdot r \cdot T}
+\label{eq:delivery_approx}
+\end{equation}
+
+The replication factor $r(q)$ is QoS-dependent:
+
+\begin{equation}
+r(q) = \begin{cases}
+  1 & \text{if } q = 0 \\
+  \lceil \log_2(N_{\text{local}}) \rceil & \text{if } q = 1 \\
+  N_{\text{local}} & \text{if } q = 2
+\end{cases}
+\label{eq:replication}
+\end{equation}
+
+where $N_{\text{local}}$ is the number of reachable next-hop relays. Class~2 events flood the local neighborhood to maximize delivery probability at the cost of higher gas consumption.
+
+Figure~\ref{fig:lifecycle} shows the complete lifecycle of an Ekwe event from creation through settlement.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/d5-event-lifecycle.png}
+\caption{Ekwe event lifecycle: from creation to settlement on Bitcoin.}
+\label{fig:lifecycle}
+\end{figure}
+
 % ============================================================
 % 8. BRIDGE LOGIC / EDGE AGENT
 % ============================================================
@@ -405,7 +452,7 @@ Smartphones are first-class relayers due to their ubiquity and multi-radio capab
 
 Ekwe employs a \textbf{transport multiplexer} that provides a unified interface across heterogeneous radio technologies. The multiplexer selects the optimal transport based on availability, link quality, energy budget, and payload characteristics.
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Transport characteristics and use cases.}
 \label{tab:transports}
@@ -446,6 +493,30 @@ Inspired by TON's multi-phase fee structure~\cite{ton_whitepaper,ton_fees}, Ekwe
   \item \textbf{Storage Fee} ($f_{\text{str}}$): paid for retaining events/receipts beyond an immediate forwarding window.
 \end{enumerate}
 
+\subsubsection{Fee Computation}
+
+Let $e$ denote an event with payload size $|e|$ (bytes), expected hop count $h$, QoS class $q \in \{0, 1, 2\}$, compute gas units $g_c$, and requested storage duration $\tau_s$ (seconds). The total fee $F(e)$ is:
+
+\begin{align}
+f_{\text{fwd}}(e) &= p_{\text{byte}} \cdot |e| \cdot h \cdot \mu(q) \label{eq:ffwd} \\
+f_{\text{cmp}}(e) &= p_{\text{gas}} \cdot g_c \label{eq:fcmp} \\
+f_{\text{str}}(e) &= p_{\text{store}} \cdot |e| \cdot \tau_s \label{eq:fstr} \\
+F(e) &= f_{\text{fwd}}(e) + f_{\text{cmp}}(e) + f_{\text{str}}(e) \label{eq:total_fee}
+\end{align}
+
+where $p_{\text{byte}}$, $p_{\text{gas}}$, and $p_{\text{store}}$ are governance-set base prices denominated in \$EKWE, and $\mu(q)$ is the QoS multiplier:
+
+\begin{equation}
+\mu(q) = \begin{cases}
+  1.0 & \text{if } q = 0 \text{ (Best-effort)} \\
+  2.0 & \text{if } q = 1 \text{ (Reliable)} \\
+  5.0 & \text{if } q = 2 \text{ (Critical)}
+\end{cases}
+\label{eq:qos_mult}
+\end{equation}
+
+For events with \texttt{payload\_type = EXECUTABLE}, compute gas $g_c$ is metered during WASM/zkVM execution. For data-only events, $g_c = 0$.
+
 \subsection{Sponsorship Model}
 
 Ekwe's primary operational model follows an \textbf{integrator-sponsored gas} pathway:
@@ -470,6 +541,31 @@ R_{\text{storage}} &= \delta \cdot f_{\text{str}}
 
 where $\alpha + \beta + \gamma + \delta = 1$. The parameters $\alpha, \beta, \gamma, \delta$ are governance-controlled, published on-chain, and may be dynamically tuned for network conditions.
 
+\subsubsection{Per-Relayer Distribution}
+
+When multiple relayers participate in forwarding (as recorded in \texttt{relay\_trace}), the forwarding reward $R_{\text{relayer}}$ is distributed among $n$ relayers. Let $w_i$ denote the weight assigned to relayer $i$ based on link quality and hop position:
+
+\begin{equation}
+w_i = \frac{1}{\text{hop}_i} \cdot \lambda_i
+\label{eq:relayer_weight}
+\end{equation}
+
+where $\text{hop}_i$ is the relayer's position in the trace (earlier relayers receive more) and $\lambda_i \in (0, 1]$ is a link-quality factor derived from transport reliability metrics. Each relayer receives:
+
+\begin{equation}
+R_i = R_{\text{relayer}} \cdot \frac{w_i}{\sum_{j=1}^{n} w_j}
+\label{eq:per_relayer}
+\end{equation}
+
+Figure~\ref{fig:gasrewards} illustrates the complete fee decomposition and reward distribution flow.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/d4-gas-rewards.png}
+\caption{Gas fee decomposition and reward splitting across network participants.}
+\label{fig:gasrewards}
+\end{figure}
+
 % ============================================================
 % 11. TOKEN ECONOMICS
 % ============================================================
@@ -487,16 +583,69 @@ Ekwe Protocol employs a \textbf{dual-token model} designed to align short-term u
   \item \textbf{Governance}: token-weighted voting on protocol parameters ($\alpha, \beta, \gamma, \delta$, fee floors, QoS policies).
 \end{itemize}
 
+\subsubsection{Staking Requirements}
+
+Nodes must meet minimum stake thresholds $S_{\min}(r)$ to assume role $r$:
+
+\begin{equation}
+S_{\min}(r) = \begin{cases}
+  0 & \text{if } r = \text{Mobile Node} \\
+  S_0 & \text{if } r = \text{Light Relay} \\
+  k_1 \cdot S_0 & \text{if } r = \text{Full Relay} \\
+  k_2 \cdot S_0 & \text{if } r = \text{Execution Node} \\
+  k_3 \cdot S_0 & \text{if } r = \text{Commit Node}
+\end{cases}
+\label{eq:staking}
+\end{equation}
+
+where $S_0$ is the base stake unit and $k_1 < k_2 < k_3$ are role multipliers set by governance. A node's effective reputation score $\rho_i$ is computed as:
+
+\begin{equation}
+\rho_i = \frac{s_i}{S_{\min}(r_i)} \cdot \left( \frac{d_{\text{success},i}}{d_{\text{total},i}} \right)^{\eta} \cdot u_i
+\label{eq:reputation}
+\end{equation}
+
+where $s_i$ is the node's actual stake, $d_{\text{success},i} / d_{\text{total},i}$ is its historical delivery ratio, $\eta$ is a sensitivity exponent, and $u_i \in [0, 1]$ is a normalized uptime factor. Nodes with $\rho_i < \rho_{\min}$ are deprioritized in routing and excluded from high-QoS fulfillment.
+
+\subsubsection{Slashing}
+
+Misbehavior detected via invalid receipts, selective forwarding proofs, or failed challenges triggers stake reduction:
+
+\begin{equation}
+s_i' = s_i - \min\left(\sigma \cdot s_i, \; s_i - S_{\min}(r_i)\right)
+\label{eq:slashing}
+\end{equation}
+
+where $\sigma \in (0, 1)$ is the slashing fraction. Nodes slashed below $S_{\min}$ are automatically demoted.
+
 \subsection{BTC Mining Rewards}
 
-Smartbox nodes (Section~\ref{sec:hardware}) incorporate specialized mining hardware based on Interaction Combinator architectures, enabling energy-efficient Bitcoin mining alongside event routing. BTC rewards are distributed proportionally based on:
-\begin{itemize}[nosep]
-  \item Node uptime and availability.
-  \item Volume of data relayed and events fulfilled.
-  \item Mining hashpower contributed to the pooled mining operation.
-\end{itemize}
+Smartbox nodes (Section~\ref{sec:hardware}) incorporate specialized mining hardware based on Interaction Combinator architectures, enabling energy-efficient Bitcoin mining alongside event routing. BTC rewards are distributed proportionally based on a composite score:
+
+\begin{equation}
+\text{BTC}_i = B_{\text{pool}} \cdot \frac{\omega_i}{\sum_{j \in \mathcal{N}} \omega_j}
+\label{eq:btc_reward}
+\end{equation}
+
+where $B_{\text{pool}}$ is the total BTC earned by the mining pool in a reward period, $\mathcal{N}$ is the set of active Smartbox nodes, and $\omega_i$ is a composite weight:
+
+\begin{equation}
+\omega_i = \phi \cdot H_i + \psi \cdot V_i + \chi \cdot U_i
+\label{eq:btc_weight}
+\end{equation}
+
+where $H_i$ is hashpower contribution (normalized), $V_i$ is volume of Ekwe events relayed (normalized), $U_i$ is uptime fraction, and $\phi + \psi + \chi = 1$ are governance-set weights. This design ensures that Smartbox operators are incentivized not only for mining but also for maintaining high-quality relay service.
 
 This dual-token structure creates two distinct value streams: \$EKWE captures protocol-level utility and governance, while BTC mining rewards provide a hard-money incentive for deploying and maintaining physical infrastructure, bridging the DePIN model with Bitcoin's established monetary properties.
+
+Figure~\ref{fig:tokenomics} provides an overview of the dual-token model and value flows across network participants.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/d6-token-economics.png}
+\caption{Dual-token economic model: \$EKWE utility and BTC mining rewards.}
+\label{fig:tokenomics}
+\end{figure}
 
 % ============================================================
 % 12. EXECUTION & VERIFIABLE COMPUTING
@@ -586,28 +735,9 @@ EkwePay is the flagship application demonstrating Ekwe Protocol's capabilities f
 
 Figure~\ref{fig:ekwepay} illustrates the complete EkwePay transaction flow.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \centering
-\begin{tikzpicture}[
-  node distance=0.6cm and 2cm,
-  box/.style={draw=ekweblue, thick, rounded corners=2pt, minimum width=2.2cm, minimum height=0.8cm, fill=ekweblue!5, font=\sffamily\scriptsize, text=ekweblue, align=center},
-  arrow/.style={-{Stealth[length=2.5mm]}, thick, ekweblue!70},
-  label/.style={font=\sffamily\tiny, text=gray, align=center}
-]
-  \node[box] (trader) {Trader\\(Sender)};
-  \node[box, right=2.5cm of trader] (relay1) {Relay Node\\(EkweBox)};
-  \node[box, right=2.5cm of relay1] (customer) {Customer\\(Receiver)};
-  \node[box, below=1.2cm of relay1] (executor) {Execution\\Node};
-  \node[box, below=1.2cm of executor] (chain) {Commit Node\\(Bitcoin L2)};
-
-  \draw[arrow] (trader) -- node[above, label] {1. PAYMENT.REQUEST\\(LoRa/BLE)} (relay1);
-  \draw[arrow] (relay1) -- node[above, label] {2. Gossip\\(BLE/Wi-Fi)} (customer);
-  \draw[arrow] (customer) -- node[below, label, yshift=-2mm] {3. PAYMENT.CONFIRM\\(signed)} (relay1);
-  \draw[arrow] (relay1) -- node[right, label] {4. Execute\\+ ZK proof} (executor);
-  \draw[arrow] (executor) -- node[right, label] {5. Commit\\receipt batch} (chain);
-
-  \node[label, below=0.3cm of chain] {6. When online: sync to Bitcoin L1};
-\end{tikzpicture}
+\includegraphics[width=\textwidth]{figures/d2-ekwepay-flow.png}
 \caption{EkwePay offline transaction workflow.}
 \label{fig:ekwepay}
 \end{figure}
@@ -632,6 +762,33 @@ To control offline risk, EkwePay policies include:
   \item \textbf{Delayed finality}: transactions are provisional until settlement confirmation.
   \item \textbf{Reputation staking}: nodes and users stake \$EKWE against misbehavior.
 \end{itemize}
+
+\subsubsection{Risk Bound Formalization}
+
+Let $L_{\max}$ be the maximum permitted offline exposure per identity. For a user $u$ with outstanding unsettled transactions $\{t_1, \ldots, t_m\}$, the offline constraint is:
+
+\begin{equation}
+\sum_{j=1}^{m} v_j \leq L_{\max}(u) \quad \text{where } v_j = \text{value}(t_j) \text{ and } \text{age}(t_j) < \Delta_{\max}
+\label{eq:offline_limit}
+\end{equation}
+
+The per-user limit $L_{\max}(u)$ is a function of stake and reputation:
+
+\begin{equation}
+L_{\max}(u) = L_0 + \kappa \cdot s_u \cdot \rho_u
+\label{eq:user_limit}
+\end{equation}
+
+where $L_0$ is a base limit, $s_u$ is the user's staked \$EKWE, $\rho_u$ is reputation (Eq.~\ref{eq:reputation}), and $\kappa$ is a governance-controlled leverage parameter. Transactions exceeding $L_{\max}$ or with $\text{age}(t_j) \geq \Delta_{\max}$ are rejected by honest relayers until settlement clears outstanding exposure.
+
+The expected loss from double-spend attempts under this model is bounded by:
+
+\begin{equation}
+\mathbb{E}[\text{loss}] \leq L_{\max}(u) \cdot P_{\text{double-spend}} \cdot (1 - P_{\text{detect}})
+\label{eq:expected_loss}
+\end{equation}
+
+where $P_{\text{detect}}$ increases with network density and decreases with partition duration, providing a tunable risk/availability tradeoff.
 
 % ============================================================
 % 15. HARDWARE: EKWEBOX / SMARTBOX
@@ -702,7 +859,7 @@ Relay traces support reward attribution but introduce metadata leakage risks. Ek
 
 \subsection{Reference Implementation}
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Implementation components.}
 \label{tab:impl}
@@ -721,12 +878,37 @@ Rules Engine & Embedded & Rule-based event router for cache-first logic \\
 \end{table}
 
 \subsection{Evaluation Metrics}
+
+The following metrics are formally defined for benchmarking:
+
 \begin{enumerate}[nosep]
-  \item \textbf{Delivery ratio}: fraction of targeted nodes receiving an event within time $T$.
-  \item \textbf{Latency distribution}: end-to-end time under partitioned mobility.
-  \item \textbf{Overhead}: transmissions per delivered event (by transport and QoS class).
-  \item \textbf{Energy proxy}: radio-on time and bytes transmitted by role.
-  \item \textbf{Economic efficiency}: reward per delivered byte and spam cost.
+  \item \textbf{Delivery ratio} $\mathcal{D}(T)$: fraction of targeted nodes receiving an event within time $T$.
+  \begin{equation}
+    \mathcal{D}(T) = \frac{|\{n \in \mathcal{S} : t_{\text{recv},n} \leq t_{\text{emit}} + T\}|}{|\mathcal{S}|}
+    \label{eq:delivery_ratio}
+  \end{equation}
+  where $\mathcal{S}$ is the set of subscribed (targeted) nodes.
+  
+  \item \textbf{End-to-end latency} $\ell_n$: for each receiving node $n$, $\ell_n = t_{\text{recv},n} - t_{\text{emit}}$.
+  
+  \item \textbf{Overhead ratio} $\Omega$: total transmissions per delivered event.
+  \begin{equation}
+    \Omega = \frac{\sum_{\text{all nodes}} \text{tx}_i}{\sum_{\text{events}} \mathcal{D}(T) \cdot |\mathcal{S}|}
+    \label{eq:overhead}
+  \end{equation}
+  
+  \item \textbf{Energy cost} $E_{\text{event}}$: radio-on time per delivered event, normalized by transport.
+  \begin{equation}
+    E_{\text{event}} = \sum_{t \in \mathcal{T}} P_t \cdot \tau_{t,\text{active}}
+    \label{eq:energy}
+  \end{equation}
+  where $P_t$ is the power draw of transport $t$ and $\tau_{t,\text{active}}$ is the active radio time.
+  
+  \item \textbf{Economic efficiency} $\eta_{\text{econ}}$: reward per delivered byte versus spam cost.
+  \begin{equation}
+    \eta_{\text{econ}} = \frac{R_{\text{relayer, total}}}{\text{bytes}_{\text{delivered}}} \quad \text{vs.} \quad C_{\text{spam}} = F(e_{\text{min}}) \cdot \frac{1}{\mathcal{D}(T)}
+    \label{eq:econ_efficiency}
+  \end{equation}
 \end{enumerate}
 
 \subsection{Evaluation Scenarios}
@@ -748,7 +930,7 @@ Rules Engine & Embedded & Rule-based event router for cache-first logic \\
 % ============================================================
 \section{Roadmap}
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Ekwe Protocol development roadmap.}
 \label{tab:roadmap}
