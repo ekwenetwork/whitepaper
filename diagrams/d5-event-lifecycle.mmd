@@ -1,0 +1,39 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#7C2E1F"
+    lineColor: "#9B3E28"
+    secondaryColor: "#5A3A28"
+    fontSize: "13px"
+---
+stateDiagram-v2
+    [*] --> Created: Sender signs event
+    Created --> Queued: Edge Agent validates + queues
+    Queued --> Relaying: Transport adapter sends
+
+    state Relaying {
+        [*] --> Hop1: First relay
+        Hop1 --> HopN: Store-and-forward
+        HopN --> Delivered: Recipient in range
+        HopN --> Cached: No path, TTL > 0
+        Cached --> HopN: New neighbor discovered
+    }
+
+    Relaying --> Delivered: Target node receives
+    Relaying --> Expired: TTL exhausted
+
+    Delivered --> Executing: Payload is executable
+    Delivered --> Fulfilled: Data-only event
+
+    Executing --> ProofGenerated: zkVM generates receipt
+    ProofGenerated --> Committed: Commit Node batches
+
+    Committed --> Anchored: Bitcoin L2 settlement
+    Anchored --> Settled: L1 anchoring (periodic)
+
+    Expired --> [*]
+    Fulfilled --> [*]
+    Settled --> [*]

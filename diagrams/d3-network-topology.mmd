@@ -1,0 +1,60 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#7C2E1F"
+    lineColor: "#9B3E28"
+    secondaryColor: "#5A3A28"
+    fontSize: "13px"
+---
+flowchart TD
+    subgraph Village1["Village A: Edge Cluster"]
+        M1["📱 Mobile Node"]
+        M2["📱 Mobile Node"]
+        LR1["Light Relay"]
+        EB1["🔲 EkweBox"]
+    end
+
+    subgraph Village2["Village B: Edge Cluster"]
+        M3["📱 Mobile Node"]
+        M4["📱 Mobile Node"]
+        LR2["Light Relay"]
+        EB2["🔲 EkweBox"]
+    end
+
+    subgraph InfraNodes["Infrastructure Nodes"]
+        FR["Full Relay (LoRa + Wi-Fi + ZK)"]
+        EN["Execution Node (zkVM)"]
+        CN["Commit Node (L2)"]
+        SB["⚡ Smartbox (Mining + Relay)"]
+    end
+
+    subgraph Settlement["Settlement"]
+        L2["Bitcoin L2"]
+        L1["Bitcoin L1"]
+    end
+
+    M1 <-->|"BLE"| LR1
+    M2 <-->|"BLE"| LR1
+    LR1 <-->|"Wi-Fi Direct"| EB1
+
+    M3 <-->|"BLE"| LR2
+    M4 <-->|"BLE"| LR2
+    LR2 <-->|"Wi-Fi Direct"| EB2
+
+    EB1 <-->|"LoRaWAN (10km)"| FR
+    EB2 <-->|"LoRaWAN (10km)"| FR
+    FR <-->|"LoRa / Internet"| SB
+
+    FR --> EN
+    EN --> CN
+    SB --> CN
+    CN --> L2
+    L2 --> L1
+
+    style Village1 fill:#EBEBEB,stroke:#7C2E1F,color:#7C2E1F
+    style Village2 fill:#EBEBEB,stroke:#7C2E1F,color:#7C2E1F
+    style InfraNodes fill:#F5EDE6,stroke:#9B3E28,color:#7C2E1F
+    style Settlement fill:#F0E8DC,stroke:#5A3A28,color:#5A3A28

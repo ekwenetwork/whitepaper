@@ -1,0 +1,57 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#5A3A28"
+    lineColor: "#9B3E28"
+    fontSize: "13px"
+---
+flowchart LR
+    subgraph CentralPush["Centralized Push (APNs/FCM)"]
+        CP1["Always-on cloud broker"]
+        CP2["Internet required"]
+        CP3["No offline capability"]
+        CP4["Operator-dependent"]
+    end
+
+    subgraph USSD["USSD Mobile Money"]
+        U1["Cellular signaling"]
+        U2["Session-bound"]
+        U3["Feature phone compatible"]
+        U4["MNO gatekeeping"]
+    end
+
+    subgraph DTN["DTN / Epidemic Routing"]
+        D1["Store-and-forward"]
+        D2["Partition tolerant"]
+        D3["No incentives"]
+        D4["No execution layer"]
+    end
+
+    subgraph DePIN["DePIN (Helium/XNET)"]
+        DP1["Token incentives"]
+        DP2["Coverage only"]
+        DP3["Internet backhaul needed"]
+        DP4["No general execution"]
+    end
+
+    subgraph Ekwe["Ekwe Protocol"]
+        E1["Multi-radio mesh"]
+        E2["Offline-first"]
+        E3["Gas incentives"]
+        E4["Verifiable execution"]
+        E5["Bitcoin L2 settlement"]
+    end
+
+    CentralPush -->|"Fails offline"| Ekwe
+    USSD -->|"Fails without MNO"| Ekwe
+    DTN -->|"No economics"| Ekwe
+    DePIN -->|"Coverage only"| Ekwe
+
+    style CentralPush fill:#EBEBEB,stroke:#9B3E28,color:#5A3A28
+    style USSD fill:#EBEBEB,stroke:#9B3E28,color:#5A3A28
+    style DTN fill:#EBEBEB,stroke:#9B3E28,color:#5A3A28
+    style DePIN fill:#EBEBEB,stroke:#9B3E28,color:#5A3A28
+    style Ekwe fill:#7C2E1F,stroke:#5A3A28,color:#fff

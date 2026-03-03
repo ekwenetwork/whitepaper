@@ -1,0 +1,59 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#5A3A28"
+    lineColor: "#9B3E28"
+    fontSize: "15px"
+---
+block-beta
+    columns 5
+    
+    AL["Application Layer"]:1
+    block:L5:4
+        A1["EkwePay"] A2["SOS Alerts"] A3["Medical Logistics"] A4["dApps"]
+    end
+    
+    space:5
+    
+    EL["Execution Layer"]:1
+    block:L4:4
+        E1["WASM Runtime"] E2["zkVM: RISC Zero / SP1"] E3["Proof Generation"] E4["Rules Engine"]
+    end
+    
+    space:5
+    
+    RL["Routing Layer"]:1
+    block:L3:4
+        R1["Subscriptions"] R2["Forwarding"] R3["Dedup"] R4["Fee Enforcement"]
+    end
+    
+    space:5
+    
+    TL["Transport Layer"]:1
+    block:L2:4
+        T1["BLE Mesh"] T2["Wi-Fi Direct"] T3["LoRaWAN"] T4["UHF / NFC / QR"]
+    end
+    
+    space:5
+    
+    SL["Settlement Layer"]:1
+    block:L1:4
+        S1["zkRollup Batching"] S2["Receipt Aggregation"] S3["Bitcoin L1 Anchoring"] S4[" "]
+    end
+
+    L5 --> L4 --> L3 --> L2 --> L1
+
+    style AL fill:#fff,color:#7C2E1F,stroke:#7C2E1F,font-weight:bold
+    style EL fill:#fff,color:#9B3E28,stroke:#9B3E28,font-weight:bold
+    style RL fill:#fff,color:#B55E3C,stroke:#B55E3C,font-weight:bold
+    style TL fill:#fff,color:#D1A872,stroke:#C9B28C,font-weight:bold
+    style SL fill:#fff,color:#5A3A28,stroke:#5A3A28,font-weight:bold
+    style L5 fill:#7C2E1F,color:#fff,stroke:#7C2E1F
+    style L4 fill:#9B3E28,color:#fff,stroke:#9B3E28
+    style L3 fill:#B55E3C,color:#fff,stroke:#B55E3C
+    style L2 fill:#D1A872,color:#5A3A28,stroke:#D1A872
+    style L1 fill:#5A3A28,color:#fff,stroke:#5A3A28
+    style S4 fill:#5A3A28,color:#5A3A28,stroke:#5A3A28

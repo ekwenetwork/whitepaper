@@ -1,0 +1,42 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#7C2E1F"
+    lineColor: "#9B3E28"
+    secondaryColor: "#5A3A28"
+    fontSize: "13px"
+---
+flowchart LR
+    subgraph FeeInput["Fee Decomposition"]
+        Sender["Sender / Integrator"]
+        Sender --> Ffwd["f_fwd: Forwarding Fee"]
+        Sender --> Fcmp["f_cmp: Compute Fee"]
+        Sender --> Fstr["f_str: Storage Fee"]
+    end
+
+    subgraph Splitting["Reward Splitting"]
+        Ffwd -->|"α weight"| Relayers["🔄 Relayers"]
+        Fcmp -->|"β weight"| Executors["⚙️ Execution Nodes"]
+        Ffwd -->|"γ weight"| Committers["📦 Commit Nodes"]
+        Fcmp -->|"γ weight"| Committers
+        Fstr -->|"δ weight"| Storage["💾 Storage Nodes"]
+    end
+
+    subgraph Rewards["Reward Distribution"]
+        Relayers --> EKWE1["$EKWE Rewards"]
+        Executors --> EKWE2["$EKWE Rewards"]
+        Committers --> EKWE3["$EKWE Rewards"]
+        Storage --> EKWE4["$EKWE Rewards"]
+    end
+
+    subgraph Mining["Smartbox Mining"]
+        Hashpower["Mining Hashpower"] --> BTC["BTC Rewards"]
+    end
+
+    style FeeInput fill:#EBEBEB,stroke:#7C2E1F,color:#7C2E1F
+    style Splitting fill:#F5EDE6,stroke:#9B3E28,color:#7C2E1F
+    style Rewards fill:#EBEBEB,stroke:#5A3A28,color:#5A3A28
+    style Mining fill:#F0E8DC,stroke:#5A3A28,color:#5A3A28

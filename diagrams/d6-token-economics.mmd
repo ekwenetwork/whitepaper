@@ -1,0 +1,59 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#7C2E1F"
+    lineColor: "#9B3E28"
+    secondaryColor: "#5A3A28"
+    fontSize: "13px"
+---
+flowchart TD
+    subgraph DualToken["Dual-Token Model"]
+        direction TB
+        subgraph EKWEToken["$EKWE Utility Token"]
+            Gas["⛽ Gas Payments"]
+            Stake["🔒 Node Staking"]
+            Govern["🗳️ Governance"]
+            DApp["📱 dApp Access"]
+        end
+
+        subgraph BTCToken["BTC Mining Rewards"]
+            Uptime["📊 Node Uptime"]
+            Volume["📡 Data Relayed"]
+            Hash["⚡ Hashpower"]
+        end
+    end
+
+    subgraph Sources["Value Sources"]
+        EventFees["Event Fees (per-event gas)"]
+        MiningPool["Pooled Bitcoin Mining"]
+    end
+
+    subgraph Participants["Network Participants"]
+        MobileNode["📱 Mobile Nodes"]
+        RelayNode["🔲 EkweBox Relays"]
+        ExecNode["⚙️ Execution Nodes"]
+        SmartboxNode["⚡ Smartbox Nodes"]
+        CommitNode["📦 Commit Nodes"]
+    end
+
+    EventFees --> Gas
+    EventFees --> Stake
+    MiningPool --> Hash
+
+    MobileNode -->|"Earn $EKWE"| Gas
+    RelayNode -->|"Earn $EKWE"| Gas
+    ExecNode -->|"Earn $EKWE"| Gas
+    SmartboxNode -->|"Earn $EKWE + BTC"| Gas
+    SmartboxNode -->|"Mine BTC"| Hash
+    CommitNode -->|"Earn $EKWE"| Gas
+
+    Govern -->|"Vote on α, β, γ, δ"| EventFees
+
+    style DualToken fill:#f8f9fa,stroke:#7C2E1F,color:#7C2E1F
+    style EKWEToken fill:#F5EDE6,stroke:#7C2E1F,color:#7C2E1F
+    style BTCToken fill:#F0E8DC,stroke:#5A3A28,color:#5A3A28
+    style Sources fill:#EBEBEB,stroke:#9B3E28,color:#333
+    style Participants fill:#EBEBEB,stroke:#5A3A28,color:#5A3A28

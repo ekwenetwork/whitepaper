@@ -1,0 +1,41 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#7C2E1F"
+    lineColor: "#9B3E28"
+    secondaryColor: "#5A3A28"
+    fontSize: "13px"
+---
+sequenceDiagram
+    participant Trader as Trader (Sender)
+    participant Relay as Relay Node (EkweBox)
+    participant Customer as Customer (Receiver)
+    participant Executor as Execution Node
+    participant Commit as Commit Node (Bitcoin L2)
+    participant BTC as Bitcoin L1
+
+    Trader->>Relay: 1. PAYMENT.REQUEST (LoRa/BLE)
+    Note over Trader,Relay: Signed intent with amount, currency, TTL
+
+    Relay->>Customer: 2. Gossip forward (BLE/Wi-Fi)
+    Note over Relay,Customer: Store-and-forward via nearby relays
+
+    Customer->>Relay: 3. PAYMENT.CONFIRM (signed)
+    Note over Customer,Relay: Ed25519 signature, bounded validity
+
+    Relay->>Executor: 4. Forward to Execution Node
+    Executor->>Executor: 5. Run payment logic (WASM/zkVM)
+    Executor->>Executor: 6. Generate ZK proof
+
+    Executor->>Commit: 7. Submit receipt + proof
+    Note over Executor,Commit: Batched with other receipts
+
+    Commit->>BTC: 8. Periodic L1 anchoring
+    Note over Commit,BTC: When online: zkRollup commitment
+
+    Commit-->>Relay: 9. Settlement confirmation
+    Relay-->>Trader: 10. Transaction finalized
+    Relay-->>Customer: 10. Transaction finalized
