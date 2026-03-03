@@ -820,6 +820,107 @@ The Smartbox extends the EkweBox with mining capabilities:
 The Smartbox creates a compelling DePIN value proposition: a single device routes Ekwe events (earning \$EKWE gas fees), mines Bitcoin (earning BTC), and provides community communication infrastructure, all powered by solar energy.
 
 % ============================================================
+% 16. SDK & DEVELOPER TOOLKIT
+% ============================================================
+\section{SDK and Developer Toolkit}
+\label{sec:sdk}
+
+Ekwe's developer ecosystem is built around a layered SDK architecture that enables third-party applications to leverage the protocol's offline-first dissemination, verifiable execution, and economic primitives without managing transport, routing, or settlement directly.
+
+\subsection{SDK Architecture}
+
+The Ekwe SDK consists of three tiers:
+
+\begin{table}[H]
+\centering
+\caption{Ekwe SDK tiers.}
+\label{tab:sdk}
+\begin{tabular}{@{}llp{7cm}@{}}
+\toprule
+\textbf{Tier} & \textbf{Language} & \textbf{Scope} \\
+\midrule
+Core SDK & Rust & Embeddable Edge Agent library: event creation, signing, subscription management, transport abstraction, local storage. Compiles to native, WASM, and C-FFI targets. \\
+Mobile SDK & Kotlin / Swift & Native Android and iOS wrappers around Core SDK via FFI. Handles OS-level BLE/Wi-Fi permissions, background execution, and push notification bridging. \\
+Web SDK & TypeScript & Browser and Node.js client for REST/WebSocket interaction with Edge Agent. Event builder, subscription API, and wallet integration. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Core API Surface}
+
+The Core SDK exposes a minimal, transport-agnostic API:
+
+\begin{lstlisting}[caption={Core SDK interface (Rust).}]
+pub trait EkweClient {
+    // Event lifecycle
+    fn create_event(payload: Payload, qos: QoSClass,
+                    ttl: Duration) -> Result<EkweEvent>;
+    fn sign_event(event: &mut EkweEvent,
+                  key: &SigningKey) -> Result<()>;
+    fn submit_event(event: EkweEvent) -> Result<EventId>;
+
+    // Subscriptions
+    fn subscribe(filter: SubscriptionFilter,
+                 handler: EventHandler) -> Result<SubId>;
+    fn unsubscribe(sub_id: SubId) -> Result<()>;
+
+    // Payments (EkwePay)
+    fn create_payment(amount: u64, currency: &str,
+                      recipient: &PubKey) -> Result<EkweEvent>;
+    fn confirm_payment(request: &EkweEvent,
+                       key: &SigningKey) -> Result<EkweEvent>;
+
+    // Node & wallet
+    fn stake(amount: u64, role: NodeRole) -> Result<TxId>;
+    fn balance() -> Result<Balance>;
+    fn node_status() -> Result<NodeInfo>;
+}
+\end{lstlisting}
+
+\subsection{Transport Abstraction}
+
+Application developers interact exclusively with the event-level API. The SDK's transport layer automatically selects the optimal bearer based on availability and policy:
+
+\begin{equation}
+t^* = \arg\min_{t \in \mathcal{T}_{\text{avail}}} \left[ c_{\text{energy}}(t) + c_{\text{latency}}(t) \cdot \mu(q) \right]
+\label{eq:transport_select}
+\end{equation}
+
+where $\mathcal{T}_{\text{avail}}$ is the set of currently available transports, $c_{\text{energy}}(t)$ and $c_{\text{latency}}(t)$ are normalized cost estimates, and $\mu(q)$ is the QoS multiplier (Eq.~\ref{eq:qos_mult}). For Class~2 events, the SDK may broadcast across multiple transports simultaneously.
+
+\subsection{Developer Workflow}
+
+A typical integration follows four steps:
+\begin{enumerate}[nosep]
+  \item \textbf{Initialize}: instantiate \texttt{EkweClient} with node configuration and key material.
+  \item \textbf{Subscribe}: register event handlers for relevant event types and topics.
+  \item \textbf{Emit}: create, sign, and submit events. The SDK handles routing, relay selection, and fee attachment.
+  \item \textbf{Settle}: for payment events, monitor settlement status via callback or polling.
+\end{enumerate}
+
+\subsection{Gas Sponsorship for dApps}
+
+Third-party applications (clinics, logistics platforms, alert systems) can pre-fund gas accounts to sponsor event delivery for their end users:
+
+\begin{lstlisting}[caption={Gas sponsorship example.}]
+// Integrator pre-funds a gas account
+let gas_account = client.create_gas_account(
+    initial_balance: 10_000,  // $EKWE
+    authorized_topics: vec!["clinic.alerts", "clinic.logistics"],
+    rate_limit: RateLimit::PerMinute(100),
+)?;
+
+// End-user events are gas-free at the application layer
+let alert = client.create_event(
+    payload: Payload::Data(patient_alert),
+    qos: QoSClass::Critical,
+    sponsor: gas_account.id,
+)?;
+\end{lstlisting}
+
+This mirrors the integrator-sponsored gas model (Section~10.2), enabling zero-cost end-user experiences while maintaining protocol-level economic accountability.
+
+% ============================================================
 % 16. SECURITY & PRIVACY
 % ============================================================
 \section{Security and Privacy}
