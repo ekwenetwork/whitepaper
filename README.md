@@ -2,7 +2,7 @@
   <img src="figures/ekwe-drum.jpg" alt="Ekwe Drum" width="180" />
 </p>
 
-<h1 align="center">Ekwe Protocol — Whitepaper</h1>
+<h1 align="center">Ekwe Protocol Whitepaper</h1>
 
 <p align="center">
   <em>A Decentralized Event-Driven Edge Network for Resilient Push Messaging and Offline Transactions Anchored to a Bitcoin Layer-2</em>
@@ -25,11 +25,11 @@
 
 The protocol supports:
 
-- **Offline-first delivery** — store-and-forward dissemination across network partitions
-- **Multi-radio relaying** — BLE, Wi-Fi Direct, LoRaWAN, and optional legacy radio (UHF/VHF, NFC, QR, audio)
-- **Programmable event execution** — verifiable computation at the edge via zkVM
-- **Economic metering** — TON-inspired per-event gas accounting with reward splitting
-- **Bitcoin L2 settlement** — periodic anchoring to Bitcoin for global finality and auditability
+- **Offline-first delivery** - store-and-forward dissemination across network partitions
+- **Multi-radio relaying** - BLE, Wi-Fi Direct, LoRaWAN, and optional legacy radio (UHF/VHF, NFC, QR, audio)
+- **Programmable event execution** - verifiable computation at the edge via zkVM
+- **Economic metering** - TON-inspired per-event gas accounting with reward splitting
+- **Bitcoin L2 settlement** - periodic anchoring to Bitcoin for global finality and auditability
 
 The flagship application, **EkwePay**, enables offline-first financial transactions propagated through community-operated relay networks with eventual settlement on Bitcoin.
 
@@ -96,7 +96,7 @@ sudo dnf install texlive-scheme-full
 ### Compile
 
 ```bash
-# Using latexmk (recommended — handles multiple passes automatically)
+# Using latexmk (recommended - handles multiple passes automatically)
 latexmk -pdf main.tex
 
 # Or manually
@@ -141,7 +141,7 @@ rm -f main.{aux,log,out,toc,fdb_latexmk,fls,synctex.gz}
 
 | Concept | Summary |
 |---------|---------|
-| **Ekwe Event** | Signed, structured message envelope — the atomic unit of the protocol |
+| **Ekwe Event** | Signed, structured message envelope, the atomic unit of the protocol |
 | **Edge Cluster** | Local broadcast domain of nearby nodes sharing a transport fabric |
 | **Relay Node** | Community-operated device that forwards events (smartphone, EkweBox, Smartbox) |
 | **Execution Node** | Node capable of running programmable event logic with zkVM proof generation |
