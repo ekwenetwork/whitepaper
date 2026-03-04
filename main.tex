@@ -15,6 +15,7 @@
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, decorations.pathreplacing}
 \usepackage{graphicx}
 \usepackage{float}
+\usepackage{pifont} % for \ding{51} checkmark and \ding{55} crossmark
 
 % Tables, lists, code
 \usepackage{booktabs}
@@ -189,7 +190,155 @@ Ekwe targets a pragmatic transport palette already available in consumer and low
 \end{itemize}
 
 % ============================================================
-% 3. PROBLEM STATEMENT
+% 3. LITERATURE REVIEW
+% ============================================================
+\section{Literature Review}
+
+This section surveys the five research domains that converge in Ekwe Protocol: delay-tolerant networking, mobile money and offline payment systems, decentralized physical infrastructure networks, zero-knowledge proof systems for edge computing, and Bitcoin Layer 2 architectures. Figure~\ref{fig:landscape} positions Ekwe relative to existing approaches.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/d7-landscape.png}
+\caption{Technology landscape: Ekwe Protocol synthesizes capabilities absent from any single existing approach.}
+\label{fig:landscape}
+\end{figure}
+
+\subsection{Delay-Tolerant and Opportunistic Networking}
+
+The DTN architecture, formalized in RFC~4838~\cite{rfc4838}, introduced the Bundle Protocol and a store-carry-forward paradigm for networks where end-to-end paths cannot be assumed. The architecture was originally motivated by interplanetary networking but has found significant application in terrestrial challenged networks.
+
+\textbf{Routing strategies} in DTN environments represent a core trade-off between delivery probability and resource consumption. Vahdat and Becker~\cite{vahdat_epidemic} proposed \textit{epidemic routing}, where nodes replicate messages to every encountered peer, achieving high delivery ratios at the cost of significant overhead. Spyropoulos et al.~\cite{spyropoulos_spray} introduced \textit{Spray-and-Wait}, bounding the number of message copies to $L$ and distributing them to $L$ distinct relays, then waiting for direct delivery. This approach dramatically reduces overhead while maintaining competitive delivery ratios. Lindgren et al.~\cite{lindgren_prophet} developed \textit{PRoPHET} (Probabilistic Routing Protocol using History of Encounters and Transitivity), which exploits non-random mobility patterns by maintaining delivery predictability tables that are updated upon node encounters and transitively propagated.
+
+Jones et al.~\cite{jones_meed} proposed \textit{MEED} (Minimum Estimated Expected Delay), which computes expected delay based on contact history and selects routes that minimize total expected delivery time. More recent work by Cao and Sun~\cite{cao_dtn_survey} provides a comprehensive survey of DTN routing, identifying open challenges in incentive alignment, security, and quality-of-service guarantees in store-and-forward networks.
+
+Ekwe's QoS-based routing maps directly onto this taxonomy (Figure~\ref{fig:dtnrouting}): Class~0 (best-effort) adopts MEED-like opportunistic forwarding; Class~1 (reliable) uses Spray-and-Wait bounded replication; and Class~2 (critical) employs epidemic flooding with economic controls through gas fees.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/d9-dtn-routing.png}
+\caption{Mapping DTN routing strategies to Ekwe QoS classes.}
+\label{fig:dtnrouting}
+\end{figure}
+
+\textbf{Incentive mechanisms} in DTN have received growing attention. Buttyan et al.~\cite{buttyan_incentive} analyzed cooperation incentives in multi-hop ad hoc networks, showing that without explicit incentive mechanisms, rational nodes exhibit selfish behavior (dropping or refusing to relay messages). Shevade et al.~\cite{shevade_incentive_dtn} proposed credit-based incentive schemes for DTN cooperation, where nodes accumulate credits for relaying and spend credits for originating messages. Ekwe's gas model formalizes this intuition with on-chain settlement and verifiable relay traces.
+
+\textbf{Bundle Protocol v7} (RFC~9171~\cite{rfc9171}) updated the DTN specification with improved security, fragmentation, and convergence-layer abstraction. Ekwe's Edge Agent (Section~8) draws on the convergence-layer architecture but adds economic metering and multi-transport multiplexing absent from the BP specification.
+
+\subsection{Mobile Money and Offline Payment Systems}
+
+Mobile money has become the dominant digital payment mechanism across Sub-Saharan Africa. The GSMA State of the Industry Report~\cite{gsma_sotir} documents over 1.75 billion registered accounts globally (2024), with Sub-Saharan Africa accounting for the majority of transaction volume. M-Pesa, launched in Kenya in 2007~\cite{hughes_mpesa}, demonstrated that mobile-phone-based payment systems can achieve mass adoption without traditional banking infrastructure.
+
+\textbf{USSD as payment bearer}: USSD remains the primary access channel for mobile money, operating over cellular signaling channels without requiring IP data plans~\cite{etsi_ussd_stage1,gsma_ussd}. However, USSD's fundamental limitations are well-documented: sessions are operator-mediated and infrastructure-dependent, the protocol offers limited programmability, and service fails entirely during cellular outages or deliberate network shutdowns~\cite{etsi_ussd_stage2}.
+
+\textbf{Offline payment approaches}: The challenge of enabling digital payments without continuous connectivity has produced several research directions:
+
+\begin{enumerate}[nosep]
+  \item \textit{NFC-based offline transactions}: GSMA's research on offline NFC payments~\cite{gsma_ussd} demonstrates value-storing secure elements that enable card-present transactions without real-time authorization. Visa and Mastercard have piloted offline-capable NFC protocols, but these require specialized hardware and trusted secure elements.
+
+  \item \textit{Central Bank Digital Currencies (CBDCs)}: Project Sela (BIS Innovation Hub, 2023)~\cite{bis_sela} and e-CNY (People's Bank of China)~\cite{ecny_design} have explored offline CBDC designs using secure hardware envelopes. These approaches rely on trusted execution environments (TEEs) and hardware-backed counters to prevent double-spending without network connectivity.
+
+  \item \textit{Token-based offline systems}: Chaum and Pedersen's original blind signature scheme~\cite{chaum_blind} enables unlinkable offline payments but requires periodic online settlement. More recent constructions by Baldimtsi and Lysyanskaya~\cite{baldimtsi_anon} extend anonymous credentials to transferable e-cash with offline verification.
+
+  \item \textit{Blockchain-based approaches}: Lightning Network payment channels~\cite{poon_lightning} enable off-chain transactions with eventual on-chain settlement, but require channel setup and online dispute resolution. State channels generalize this pattern but assume periodic connectivity.
+\end{enumerate}
+
+Ekwe's EkwePay takes a distinct approach: signed intents with bounded validity windows and risk controls, propagated via community-operated mesh networks, with eventual settlement on a Bitcoin L2. This combines the offline-first property of CBDC designs with the decentralized settlement of blockchain approaches, without requiring trusted hardware.
+
+\subsection{Decentralized Physical Infrastructure Networks (DePIN)}
+
+The DePIN thesis, articulated by Messari~\cite{messari_depin} and further developed by the Multicoin Capital framework~\cite{multicoin_depin}, proposes that cryptographic token incentives can coordinate the deployment of physical infrastructure by distributed participants, potentially achieving coverage and scale that would be uneconomical for centralized operators.
+
+\textbf{Helium}~\cite{helium} provides the most prominent DePIN precedent. Its LoRaWAN hotspot network grew to over 900,000 nodes by mid-2023 through HNT token incentives. However, Helium's trajectory also illustrates DePIN challenges: the network migrated from its own L1 to Solana in 2023 due to scalability concerns, and Proof-of-Coverage mechanisms proved vulnerable to gaming and spoofing~\cite{helium_poc_issues}. Critically, Helium provides \textit{coverage} (data forwarding) but not \textit{execution} or \textit{application-layer primitives}.
+
+\textbf{XNET}~\cite{xnet} targets CBRS (Citizens Broadband Radio Service) spectrum sharing with token incentives for deploying small cells, demonstrating DePIN applicability to cellular infrastructure. Unlike Ekwe, XNET assumes Internet backhaul availability and focuses on throughput rather than partition tolerance.
+
+\textbf{Filecoin}~\cite{filecoin} applies DePIN incentives to storage, introducing Proof-of-Replication and Proof-of-Spacetime to verify that storage providers honestly maintain data. Filecoin's proof mechanisms inspire Ekwe's approach to verifiable relay (proving that a node actually forwarded an event) though Ekwe operates in a more resource-constrained environment.
+
+\textbf{Comparison}: Table~\ref{tab:depin_compare} summarizes how Ekwe differs from existing DePIN networks.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of DePIN networks.}
+\label{tab:depin_compare}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Property} & \textbf{Helium} & \textbf{XNET} & \textbf{Filecoin} & \textbf{Hivemapper} & \textbf{Ekwe} \\
+\midrule
+Offline-first & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{51} \\
+Multi-radio transport & Partial & \ding{55} & N/A & N/A & \ding{51} \\
+Verifiable execution & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{51} \\
+Application layer & \ding{55} & \ding{55} & Storage & Maps & Payments + dApps \\
+Settlement & Solana & Ethereum & Filecoin & Solana & Bitcoin L2 \\
+Per-event gas model & \ding{55} & \ding{55} & Per-deal & \ding{55} & \ding{51} \\
+Partition tolerance & \ding{55} & \ding{55} & Partial & \ding{55} & \ding{51} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Zero-Knowledge Proofs for Edge and IoT}
+
+Zero-knowledge proof systems have undergone rapid practical advancement, with direct implications for resource-constrained edge environments.
+
+\textbf{zkVM systems}: RISC Zero~\cite{risczero} implements a zkVM based on the RISC-V instruction set, enabling zero-knowledge proofs of arbitrary computation expressed as standard programs. SP1 (Succinct)~\cite{sp1} provides an alternative RISC-V-based zkVM with a focus on prover performance. Both systems produce \textit{receipts}: cryptographic proofs that a specific computation executed correctly on specific inputs, verifiable in $O(\log n)$ time. Ekwe leverages this property to prove correct event execution (payment authorization, compliance checks) without revealing transaction details beyond what is necessary for settlement.
+
+\textbf{zkSNARKs in constrained environments}: Ozdemir and Boneh~\cite{ozdemir_experimenting} analyzed the practical performance of zkSNARK proving on mobile and IoT devices, identifying memory and proving time as key bottlenecks. Their findings motivate Ekwe's design choice to allow \textit{asynchronous proof generation}: execution proceeds immediately, while proof generation can be deferred to more capable nodes or batched for efficiency.
+
+\textbf{Verifiable computation delegation}: Gennaro et al.~\cite{gennaro_verifiable} formalized the notion of non-interactive verifiable computation, where a client delegates computation to an untrusted server and efficiently verifies the result. Ekwe's Execution Nodes instantiate this pattern: edge devices delegate payment logic execution to Execution Nodes and verify receipts locally or through the settlement layer.
+
+\textbf{zkWASM}: Projects like zkWASM (Delphinus Lab)~\cite{zkwasm} combine WebAssembly portability with zero-knowledge proof generation, enabling provable execution of WASM modules. Ekwe's execution runtime supports zkWASM as a backend, offering a path to proving arbitrary dApp logic at the edge.
+
+\subsection{Bitcoin Layer 2 Architectures}
+
+Bitcoin L2 systems provide the settlement and finality layer for Ekwe Protocol. The design space has expanded significantly, as systematized by Qi et al.~\cite{sok_btc_l2}.
+
+\textbf{State channels and Lightning}: The Lightning Network~\cite{poon_lightning} pioneered off-chain Bitcoin transactions through bidirectional payment channels, enabling near-instant payments with eventual on-chain settlement. Lightning's limitations include the requirement for channel liquidity, online dispute resolution, and the assumption that both parties can access the chain within a challenge period. Ekwe's delayed-connectivity environment makes direct Lightning integration challenging, though Lightning bridges for on-ramp/off-ramp remain viable.
+
+\textbf{BitVM and BitVM2}: Linus~\cite{bitvm2} proposed BitVM2 as a mechanism for arbitrary program verification using Bitcoin as a dispute layer, enabling trust-minimized bridges and L2 settlement. BitVM2's challenge-response protocol is compatible with Ekwe's eventual-settlement model, where proofs can be submitted and challenged when connectivity is restored.
+
+\textbf{Rollups on Bitcoin}: Stacks~\cite{stacks} implements a smart contract layer anchored to Bitcoin through Proof-of-Transfer consensus. Citrea~\cite{citrea} proposes a zk-rollup directly on Bitcoin using BitVM for verification. Ekwe's settlement layer is designed to be modular, potentially leveraging any of these L2 architectures for proof commitment and dispute resolution.
+
+\textbf{Relevance to offline scenarios}: A critical insight from the L2 literature is the separation between \textit{authorization} (which can happen offline with signed intents) and \textit{settlement} (which requires eventual chain access). Ekwe formalizes this separation with bounded validity windows and risk controls (Section~14.2), treating the connectivity gap as a design parameter rather than a failure mode.
+
+\subsection{Mesh Networking and Community Networks}
+
+\textbf{Community mesh networks} have demonstrated the viability of grassroots infrastructure deployment. Guifi.net~\cite{guifi}, originating in Catalonia, grew to over 36,000 nodes through a commons-based governance model. Serval Project~\cite{serval} targeted smartphone mesh networking for disaster response, implementing store-and-forward messaging over Wi-Fi and Bluetooth. goTenna~\cite{gotenna} commercialized LoRa-based mesh devices for off-grid communication, validating consumer demand for connectivity independence.
+
+\textbf{LoRaWAN for IoT}: The LoRa Alliance specification~\cite{lorawan} defines a LPWAN protocol optimized for long-range, low-power communication. LoRaWAN's characteristics (up to 15~km range in rural environments, sub-1~kbps data rates, multi-year battery life) make it an ideal transport for Ekwe's event dissemination in low-density areas.
+
+\textbf{Bluetooth Mesh}: The Bluetooth Mesh Profile~\cite{bt_mesh} enables many-to-many communication across BLE devices using a managed flooding approach. BLE Mesh is particularly relevant for Ekwe's intra-village communication, where dense clusters of mobile phones can relay events without infrastructure.
+
+\textbf{Wi-Fi Direct}: Android's Wi-Fi P2P framework~\cite{wifi_p2p} enables peer-to-peer connections at Wi-Fi throughput without an access point, suitable for bulk data transfer between nearby Ekwe nodes (e.g., synchronizing event caches or transferring proof batches).
+
+\subsection{Summary and Research Gap}
+
+Table~\ref{tab:gap} synthesizes the capabilities and limitations across the surveyed domains, highlighting the gap that Ekwe Protocol addresses.
+
+\begin{table}[H]
+\centering
+\caption{Research gap analysis: Ekwe unifies capabilities fragmented across existing work.}
+\label{tab:gap}
+\small
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Capability} & \textbf{DTN} & \textbf{Mobile} & \textbf{DePIN} & \textbf{ZK} & \textbf{BTC L2} & \textbf{Ekwe} \\
+ & & \textbf{Money} & & \textbf{Proofs} & & \\
+\midrule
+Partition tolerance & \ding{51} & \ding{55} & \ding{55} & N/A & Partial & \ding{51} \\
+Store-and-forward & \ding{51} & \ding{55} & \ding{55} & N/A & \ding{55} & \ding{51} \\
+Economic incentives & \ding{55} & Central & \ding{51} & \ding{55} & \ding{51} & \ding{51} \\
+Verifiable execution & \ding{55} & \ding{55} & \ding{55} & \ding{51} & Partial & \ding{51} \\
+Multi-radio support & Partial & \ding{55} & Partial & N/A & N/A & \ding{51} \\
+Offline payments & \ding{55} & Partial & \ding{55} & \ding{55} & Partial & \ding{51} \\
+Decentralized infra & \ding{55} & \ding{55} & \ding{51} & \ding{55} & \ding{51} & \ding{51} \\
+Application platform & \ding{55} & Limited & \ding{55} & \ding{55} & \ding{51} & \ding{51} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No existing system simultaneously provides partition-tolerant event dissemination, economic incentive alignment for relay infrastructure, verifiable edge execution, offline-first payment capability, and decentralized settlement. Ekwe Protocol is designed to occupy this intersection.
+
+% ============================================================
+% 4. PROBLEM STATEMENT
 % ============================================================
 \section{Problem Statement}
 
@@ -1132,6 +1281,90 @@ Helium, ``Helium Whitepaper.'' [Online]. Available: \url{https://whitepaper.heli
 
 \bibitem{messari_depin}
 Messari, ``Understanding DePIN,'' 2023--2024. [Online]. Available: \url{https://messari.io/copilot/share/understanding-depin-26867bfa-d608-49bf-a2c3-0f14d76f2d6a}
+
+\bibitem{vahdat_epidemic}
+A.~Vahdat and D.~Becker, ``Epidemic Routing for Partially-Connected Ad Hoc Networks,'' Technical Report CS-2000-06, Duke University, 2000.
+
+\bibitem{spyropoulos_spray}
+T.~Spyropoulos, K.~Psounis, and C.~S. Raghavendra, ``Spray and Wait: An Efficient Routing Scheme for Intermittently Connected Mobile Networks,'' in \textit{Proc. ACM SIGCOMM Workshop on Delay-Tolerant Networking (WDTN)}, 2005, pp.~252--259.
+
+\bibitem{lindgren_prophet}
+A.~Lindgren, A.~Doria, and O.~Schel\'{e}n, ``Probabilistic Routing in Intermittently Connected Networks,'' \textit{ACM SIGMOBILE Mobile Computing and Communications Review}, vol.~7, no.~3, pp.~19--20, 2003.
+
+\bibitem{jones_meed}
+E.~P.~C. Jones, L.~Li, and P.~A.~S. Ward, ``Practical Routing in Delay-Tolerant Networks,'' \textit{IEEE Trans. Mobile Computing}, vol.~6, no.~8, pp.~943--959, 2007.
+
+\bibitem{cao_dtn_survey}
+Y.~Cao and Z.~Sun, ``Routing in Delay/Disruption Tolerant Networks: A Taxonomy, Survey and Challenges,'' \textit{IEEE Communications Surveys \& Tutorials}, vol.~15, no.~2, pp.~654--677, 2013.
+
+\bibitem{buttyan_incentive}
+L.~Butty\'{a}n and J.-P.~Hubaux, ``Stimulating Cooperation in Self-Organizing Mobile Ad Hoc Networks,'' \textit{Mobile Networks and Applications}, vol.~8, no.~5, pp.~579--592, 2003.
+
+\bibitem{shevade_incentive_dtn}
+U.~Shevade, H.~H. Song, L.~Qiu, and Y.~Zhang, ``Incentive-Aware Routing in DTNs,'' in \textit{Proc. IEEE ICNP}, 2008, pp.~238--247.
+
+\bibitem{rfc9171}
+S.~Burleigh, K.~Fall, and E.~J. Birrane~III, ``Bundle Protocol Version 7,'' RFC~9171, IETF, 2022. [Online]. Available: \url{https://www.rfc-editor.org/rfc/rfc9171.html}
+
+\bibitem{gsma_sotir}
+GSMA, ``State of the Industry Report on Mobile Money 2024,'' 2024. [Online]. Available: \url{https://www.gsma.com/mobilemoneymetrics/}
+
+\bibitem{hughes_mpesa}
+N.~Hughes and S.~Lonie, ``M-PESA: Mobile Money for the `Unbanked','' \textit{Innovations: Technology, Governance, Globalization}, vol.~2, no.~1--2, pp.~63--81, 2007.
+
+\bibitem{bis_sela}
+Bank for International Settlements, ``Project Sela: An Accessible and Secure Retail CBDC Ecosystem,'' BIS Innovation Hub, 2023. [Online]. Available: \url{https://www.bis.org/publ/othp76.htm}
+
+\bibitem{ecny_design}
+Working Group on E-CNY Research and Development, ``Progress of Research \& Development of E-CNY in China,'' People's Bank of China, 2021.
+
+\bibitem{chaum_blind}
+D.~Chaum, ``Blind Signatures for Untraceable Payments,'' in \textit{Advances in Cryptology (CRYPTO)}, 1983, pp.~199--203.
+
+\bibitem{baldimtsi_anon}
+F.~Baldimtsi and A.~Lysyanskaya, ``Anonymous Credentials Light,'' in \textit{Proc. ACM CCS}, 2013, pp.~1087--1098.
+
+\bibitem{poon_lightning}
+J.~Poon and T.~Dryja, ``The Bitcoin Lightning Network: Scalable Off-Chain Instant Payments,'' 2016. [Online]. Available: \url{https://lightning.network/lightning-network-paper.pdf}
+
+\bibitem{multicoin_depin}
+Multicoin Capital, ``The DePIN Sector Map,'' 2023. [Online]. Available: \url{https://multicoin.capital/2023/04/20/the-depin-sector-map/}
+
+\bibitem{helium_poc_issues}
+J.~Dale, ``Helium's Proof-of-Coverage: Challenges and Gaming,'' \textit{The Block}, 2022.
+
+\bibitem{xnet}
+XNET, ``XNET: Decentralized Mobile Network,'' 2023. [Online]. Available: \url{https://www.xnet.company/}
+
+\bibitem{filecoin}
+Protocol Labs, ``Filecoin: A Decentralized Storage Network,'' 2017. [Online]. Available: \url{https://filecoin.io/filecoin.pdf}
+
+\bibitem{sp1}
+Succinct Labs, ``SP1: A Performance-Focused zkVM,'' 2024. [Online]. Available: \url{https://docs.succinct.xyz/}
+
+\bibitem{ozdemir_experimenting}
+A.~Ozdemir and D.~Boneh, ``Experimenting with Collaborative zk-SNARKs: Zero-Knowledge Proofs for Distributed Secrets,'' in \textit{Proc. USENIX Security}, 2022.
+
+\bibitem{gennaro_verifiable}
+R.~Gennaro, C.~Gentry, and B.~Parno, ``Non-Interactive Verifiable Computing: Outsourcing Computation to Untrusted Workers,'' in \textit{Advances in Cryptology (CRYPTO)}, 2010, pp.~465--482.
+
+\bibitem{zkwasm}
+Delphinus Lab, ``zkWASM: A Zero-Knowledge WebAssembly Virtual Machine,'' 2023. [Online]. Available: \url{https://github.com/aspect-build/zkwasm}
+
+\bibitem{stacks}
+Stacks Foundation, ``Stacks: A Bitcoin Layer for Smart Contracts,'' 2024. [Online]. Available: \url{https://www.stacks.co/}
+
+\bibitem{citrea}
+Citrea, ``Citrea: Bitcoin's First ZK Rollup,'' 2024. [Online]. Available: \url{https://citrea.xyz/}
+
+\bibitem{guifi}
+R.~Baig \textit{et al.}, ``Guifi.net, a Crowdsourced Network Infrastructure Held in Common,'' \textit{Computer Networks}, vol.~90, pp.~150--165, 2015.
+
+\bibitem{serval}
+P.~Gardner-Stephen \textit{et al.}, ``The Serval Project: Practical Wireless Ad-Hoc Mobile Telecommunications,'' Technical Report, Flinders University, 2011.
+
+\bibitem{gotenna}
+goTenna, ``goTenna Mesh: Off-Grid Communication,'' 2018. [Online]. Available: \url{https://gotenna.com/}
 
 \end{thebibliography}
 
