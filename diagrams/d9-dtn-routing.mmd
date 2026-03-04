@@ -1,0 +1,33 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#7C2E1F"
+    primaryTextColor: "#ffffff"
+    primaryBorderColor: "#5A3A28"
+    lineColor: "#9B3E28"
+    fontSize: "13px"
+---
+flowchart TD
+    subgraph DTNRouting["DTN Routing Strategies"]
+        direction LR
+        ER["Epidemic Routing"]
+        SW["Spray-and-Wait"]
+        PR["PRoPHET"]
+        MEED["MEED"]
+    end
+
+    subgraph EkweApproach["Ekwe: QoS-Mapped Hybrid Routing"]
+        direction LR
+        QoS0["Class 0: Best-effort (MEED-like)"]
+        QoS1["Class 1: Reliable (Spray-and-Wait)"]
+        QoS2["Class 2: Critical (Epidemic)"]
+    end
+
+    ER -->|"High delivery, high overhead"| QoS2
+    SW -->|"Bounded copies, moderate delivery"| QoS1
+    MEED -->|"Low overhead, opportunistic"| QoS0
+    PR -->|"Contact history prediction"| QoS1
+
+    style DTNRouting fill:#EBEBEB,stroke:#9B3E28,color:#5A3A28
+    style EkweApproach fill:#7C2E1F,stroke:#5A3A28,color:#fff
